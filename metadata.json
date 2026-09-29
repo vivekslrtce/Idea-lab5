@@ -1,0 +1,6 @@
+{
+  "name": "Urban Utility Problem Reporting Platform",
+  "description": "An academic civic reporting platform for citizens to lodge urban utility complaints and authorities to view, manage, and resolve issues.",
+  "requestFramePermissions": ["camera", "geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
