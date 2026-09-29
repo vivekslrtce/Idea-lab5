@@ -18,6 +18,8 @@ import { SolvedIssuesView } from './components/SolvedIssuesView';
 import { AdminDashboardView } from './components/AdminDashboardView';
 import { ProfileView } from './components/ProfileView';
 import { ComplaintDetailsModal } from './components/ComplaintDetailsModal';
+import { ActivityLogsView } from './components/ActivityLogsView';
+import { logActivity } from './utils/activityLogger';
 
 export default function App() {
   // Always start unauthenticated on fresh session / refresh so login page is presented
@@ -67,12 +69,35 @@ export default function App() {
   const handleLoginSuccess = (user: User) => {
     setCurrentUser(user);
     setIsAuthModalOpen(false);
+
+    logActivity({
+      userId: user.id,
+      userName: user.name,
+      userEmail: user.email,
+      userRole: user.role,
+      action: 'USER_LOGIN',
+      title: `${user.role === 'admin' ? 'Admin Authority' : 'Citizen'} Signed In`,
+      description: `${user.name} (${user.email}) logged into the civic portal.`
+    });
+
     if (user.role === 'admin') {
       setActiveView('admin-dashboard');
     }
   };
 
   const handleLogout = () => {
+    if (currentUser) {
+      logActivity({
+        userId: currentUser.id,
+        userName: currentUser.name,
+        userEmail: currentUser.email,
+        userRole: currentUser.role,
+        action: 'USER_LOGOUT',
+        title: 'User Signed Out',
+        description: `${currentUser.name} signed out of the session.`
+      });
+    }
+
     setCurrentUser(null);
     setActiveView('dashboard');
     setIsAuthModalOpen(true);
@@ -82,11 +107,32 @@ export default function App() {
     const updated = [...registeredUsers, newUser];
     setRegisteredUsers(updated);
     localStorage.setItem('ufr_registered_users', JSON.stringify(updated));
+
+    logActivity({
+      userId: newUser.id,
+      userName: newUser.name,
+      userEmail: newUser.email,
+      userRole: 'citizen',
+      action: 'USER_REGISTER',
+      title: 'New Citizen Registered',
+      description: `New citizen registration for ${newUser.name} (${newUser.email}, ${newUser.mobile}).`
+    });
   };
 
   const handleAdminAuthSuccess = (adminUser: User) => {
     setCurrentUser(adminUser);
     setIsAdminAuthOpen(false);
+
+    logActivity({
+      userId: adminUser.id,
+      userName: adminUser.name,
+      userEmail: adminUser.email,
+      userRole: 'admin',
+      action: 'USER_LOGIN',
+      title: 'Admin Verification Passed',
+      description: 'Admin credentials successfully verified for municipal authority portal access.'
+    });
+
     setActiveView('admin-dashboard');
   };
 
@@ -107,18 +153,89 @@ export default function App() {
 
   const handleUpdateUser = (updatedUser: User) => {
     setCurrentUser(updatedUser);
+
+    logActivity({
+      userId: updatedUser.id,
+      userName: updatedUser.name,
+      userEmail: updatedUser.email,
+      userRole: updatedUser.role,
+      action: 'PROFILE_UPDATED',
+      title: 'Profile Details Updated',
+      description: `${updatedUser.name} updated their personal profile and contact information.`
+    });
   };
 
   const handleSubmitComplaint = (newComplaint: Complaint) => {
     const updated = [newComplaint, ...complaints];
     saveComplaints(updated);
+
+    logActivity({
+      userId: newComplaint.userId,
+      userName: newComplaint.userName,
+      userEmail: currentUser?.email || 'citizen@example.com',
+      userRole: 'citizen',
+      action: 'COMPLAINT_CREATED',
+      title: `Complaint Lodged: ${newComplaint.id}`,
+      description: `Citizen ${newComplaint.userName} lodged complaint for ${newComplaint.department}: "${newComplaint.title}" at ${newComplaint.area}, ${newComplaint.city}.`,
+      targetId: newComplaint.id,
+      metadata: {
+        complaintId: newComplaint.id,
+        department: newComplaint.department,
+        priority: newComplaint.priority,
+        area: newComplaint.area,
+        city: newComplaint.city
+      }
+    });
   };
 
   const handleUpdateComplaint = (updated: Complaint) => {
+    const previous = complaints.find((c) => c.id === updated.id);
     const updatedList = complaints.map((c) => (c.id === updated.id ? updated : c));
     saveComplaints(updatedList);
     if (selectedComplaint && selectedComplaint.id === updated.id) {
       setSelectedComplaint(updated);
+    }
+
+    const actorId = currentUser?.id || 'usr-admin-01';
+    const actorName = currentUser?.name || 'Municipal Admin';
+    const actorEmail = currentUser?.email || 'admin@gov.in';
+    const actorRole = currentUser?.role || 'admin';
+
+    if (previous && previous.status !== updated.status) {
+      logActivity({
+        userId: actorId,
+        userName: actorName,
+        userEmail: actorEmail,
+        userRole: actorRole,
+        action: 'COMPLAINT_STATUS_UPDATED',
+        title: `Status Changed: ${updated.id} ➔ ${updated.status}`,
+        description: `${actorName} updated status of ${updated.id} from "${previous.status}" to "${updated.status}". ${
+          updated.adminRemark ? `Remark: "${updated.adminRemark}"` : ''
+        }`,
+        targetId: updated.id,
+        metadata: {
+          complaintId: updated.id,
+          previousStatus: previous.status,
+          newStatus: updated.status,
+          department: updated.department
+        }
+      });
+    } else {
+      logActivity({
+        userId: actorId,
+        userName: actorName,
+        userEmail: actorEmail,
+        userRole: actorRole,
+        action: 'COMPLAINT_UPDATED',
+        title: `Complaint Modified: ${updated.id}`,
+        description: `${actorName} updated complaint ${updated.id} details (Department: ${updated.department}, Priority: ${updated.priority}).`,
+        targetId: updated.id,
+        metadata: {
+          complaintId: updated.id,
+          department: updated.department,
+          priority: updated.priority
+        }
+      });
     }
   };
 
@@ -128,8 +245,8 @@ export default function App() {
       return;
     }
 
-    // Intercept Admin Dashboard access if not currently Admin
-    if (view === 'admin-dashboard' && currentUser.role !== 'admin') {
+    // Intercept Admin views access if not currently Admin
+    if ((view === 'admin-dashboard' || view === 'activity-logs') && currentUser.role !== 'admin') {
       setIsAdminAuthOpen(true);
       return;
     }
@@ -229,6 +346,16 @@ export default function App() {
               complaints={complaints}
               onSelectComplaint={(c) => setSelectedComplaint(c)}
               onUpdateComplaint={handleUpdateComplaint}
+              onNavigate={handleNavigate}
+            />
+          )}
+
+          {activeView === 'activity-logs' && (
+            <ActivityLogsView
+              currentUser={currentUser}
+              complaints={complaints}
+              onSelectComplaint={(c) => setSelectedComplaint(c)}
+              onNavigate={handleNavigate}
             />
           )}
 

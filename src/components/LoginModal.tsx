@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, Lock, Mail, User as UserIcon, Phone, Shield, CheckCircle2, AlertCircle } from 'lucide-react';
 import { User } from '../types';
-import { DEMO_CITIZEN, DEMO_ADMIN } from '../utils/initialData';
+import { DEMO_CITIZEN, DEMO_ADMIN, isGovInEmail } from '../utils/initialData';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -20,9 +20,13 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   onRegisterUser,
   canClose = true
 }) => {
-  const [isRegistering, setIsRegistering] = useState(false);
+  const [authMode, setAuthMode] = useState<'login' | 'register' | 'admin'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+
+  // Admin form state (strictly empty, no credentials given)
+  const [adminEmail, setAdminEmail] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
 
   // Register form state
   const [name, setName] = useState('');
@@ -51,8 +55,19 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       return;
     }
 
-    if (email === DEMO_ADMIN.email && password === 'admin123') {
-      onLoginSuccess(DEMO_ADMIN);
+    if (isGovInEmail(email) && password === 'admin123') {
+      const emailLower = email.trim().toLowerCase();
+      const adminUser: User = {
+        id: emailLower === DEMO_ADMIN.email.toLowerCase() ? DEMO_ADMIN.id : `usr-admin-${Date.now()}`,
+        name:
+          emailLower === DEMO_ADMIN.email.toLowerCase()
+            ? DEMO_ADMIN.name
+            : `Admin (${emailLower.split('@')[0]})`,
+        email: emailLower,
+        mobile: DEMO_ADMIN.mobile,
+        role: 'admin'
+      };
+      onLoginSuccess(adminUser);
       onClose();
       return;
     }
@@ -65,15 +80,68 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       return;
     }
 
-    setError('Invalid email or password. You can also use the Demo login buttons below!');
+    setError('Invalid email or password. Please check your credentials.');
+  };
+
+  const handleAdminLoginSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    if (!adminEmail.trim() || !adminPassword) {
+      setError('Please provide Admin Email and Password.');
+      return;
+    }
+
+    if (!isGovInEmail(adminEmail)) {
+      setError('Invalid Admin Email: Domain must be @gov.in (e.g. any name with @gov.in).');
+      return;
+    }
+
+    if (adminPassword === 'admin123') {
+      const emailLower = adminEmail.trim().toLowerCase();
+      const adminUser: User = {
+        id: emailLower === DEMO_ADMIN.email.toLowerCase() ? DEMO_ADMIN.id : `usr-admin-${Date.now()}`,
+        name:
+          emailLower === DEMO_ADMIN.email.toLowerCase()
+            ? DEMO_ADMIN.name
+            : `Admin (${emailLower.split('@')[0]})`,
+        email: emailLower,
+        mobile: DEMO_ADMIN.mobile,
+        role: 'admin'
+      };
+      onLoginSuccess(adminUser);
+      setAdminEmail('');
+      setAdminPassword('');
+      onClose();
+    } else {
+      setError('Access Denied: Invalid Admin Password.');
+    }
+  };
+
+  const handleMobileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Only allow numeric digits and cap strictly at 10 digits
+    const digitsOnly = e.target.value.replace(/\D/g, '').slice(0, 10);
+    setMobile(digitsOnly);
   };
 
   const handleRegisterSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    if (!name.trim() || !regEmail.trim() || !mobile.trim() || !regPassword) {
+    const cleanMobileDigits = mobile.replace(/\D/g, '');
+
+    if (!name.trim() || !regEmail.trim() || !cleanMobileDigits || !regPassword) {
       setError('All fields are required.');
+      return;
+    }
+
+    if (cleanMobileDigits.length !== 10) {
+      setError('Enter a Valid Mobile Number');
+      return;
+    }
+
+    if (!/^[6-9]/.test(cleanMobileDigits)) {
+      setError('Enter a Valid Mobile Number');
       return;
     }
 
@@ -92,11 +160,13 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       return;
     }
 
+    const formattedMobile = `+91 ${cleanMobileDigits}`;
+
     const newUser: User = {
       id: `usr-${Date.now()}`,
       name: name.trim(),
       email: regEmail.trim(),
-      mobile: mobile.trim(),
+      mobile: formattedMobile,
       role: 'citizen'
     };
 
@@ -108,31 +178,33 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     }, 1000);
   };
 
-  const loginAsDemoCitizen = () => {
-    onLoginSuccess(DEMO_CITIZEN);
-    onClose();
-  };
-
-  const loginAsDemoAdmin = () => {
-    onLoginSuccess(DEMO_ADMIN);
-    onClose();
-  };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 p-4 backdrop-blur-sm">
       <div className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl transition-all">
         {/* Header */}
         <div className="mb-6 flex items-center justify-between border-b border-slate-100 pb-4">
           <div className="flex items-center space-x-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-md">
+            <div
+              className={`flex h-10 w-10 items-center justify-center rounded-xl shadow-md ${
+                authMode === 'admin'
+                  ? 'bg-amber-500 text-slate-900 font-extrabold'
+                  : 'bg-blue-600 text-white'
+              }`}
+            >
               <Shield className="h-5 w-5" />
             </div>
             <div>
               <h2 className="text-xl font-bold text-slate-800">
-                {isRegistering ? 'Create Citizen Account' : 'Sign In to Portal'}
+                {authMode === 'admin'
+                  ? 'Admin Sign In'
+                  : authMode === 'register'
+                  ? 'Create Citizen Account'
+                  : 'Sign In to Portal'}
               </h2>
               <p className="text-xs font-medium text-slate-500">
-                Urban Utility Problem Reporting Platform
+                {authMode === 'admin'
+                  ? 'Restricted Municipal Authority Access'
+                  : 'Urban Utility Problem Reporting Platform'}
               </p>
             </div>
           </div>
@@ -152,6 +224,16 @@ export const LoginModal: React.FC<LoginModalProps> = ({
           </div>
         )}
 
+        {authMode === 'admin' && (
+          <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50/80 p-3 text-xs text-amber-800 flex items-start space-x-2">
+            <Shield className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
+            <div>
+              <span className="font-bold block">Protected Area</span>
+              Restricted to authorized municipal personnel. Please enter official credentials.
+            </div>
+          </div>
+        )}
+
         {error && (
           <div className="mb-4 flex items-center space-x-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
             <AlertCircle className="h-5 w-5 shrink-0 text-red-500" />
@@ -166,7 +248,64 @@ export const LoginModal: React.FC<LoginModalProps> = ({
           </div>
         )}
 
-        {!isRegistering ? (
+        {authMode === 'admin' ? (
+          /* ADMIN LOGIN FORM (Strictly no placeholders and no credentials given) */
+          <form onSubmit={handleAdminLoginSubmit} className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600">
+                Admin Email <span className="normal-case font-normal text-amber-700">(@gov.in domain)</span>
+              </label>
+              <div className="relative mt-1">
+                <Mail className="absolute left-3 top-3 h-5 w-5 text-slate-400" />
+                <input
+                  type="email"
+                  value={adminEmail}
+                  onChange={(e) => setAdminEmail(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-4 py-2.5 text-sm font-medium text-slate-800 focus:border-amber-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-200"
+                />
+              </div>
+              <p className="mt-1 text-[11px] text-slate-500">
+                Authorized government email (domain must be <span className="font-semibold text-slate-700">@gov.in</span>)
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600">
+                Password
+              </label>
+              <div className="relative mt-1">
+                <Lock className="absolute left-3 top-3 h-5 w-5 text-slate-400" />
+                <input
+                  type="password"
+                  value={adminPassword}
+                  onChange={(e) => setAdminPassword(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-4 py-2.5 text-sm font-medium text-slate-800 focus:border-amber-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-200"
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              className="w-full rounded-xl bg-amber-500 py-3 text-sm font-bold text-slate-900 shadow-md hover:bg-amber-400 transition"
+            >
+              Sign In as Admin
+            </button>
+
+            <div className="mt-4 text-center text-xs text-slate-500">
+              Citizen Portal?{' '}
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode('login');
+                  setError(null);
+                }}
+                className="font-bold text-blue-600 hover:underline"
+              >
+                Sign In
+              </button>
+            </div>
+          </form>
+        ) : authMode === 'login' ? (
           /* LOGIN FORM */
           <form onSubmit={handleLoginSubmit} className="space-y-4">
             <div>
@@ -208,49 +347,33 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               Sign In
             </button>
 
-            {/* Quick Demo Fill Buttons */}
-            <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-3 text-center">
-              <span className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
-                ⚡ Fill Demo Account Fields
-              </span>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEmail(DEMO_CITIZEN.email);
-                    setPassword('password123');
-                  }}
-                  className="rounded-lg border border-blue-200 bg-white py-2 px-3 text-xs font-bold text-blue-700 shadow-xs hover:bg-blue-50"
-                >
-                  Citizen Fields
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEmail(DEMO_ADMIN.email);
-                    setPassword('admin123');
-                  }}
-                  className="rounded-lg border border-purple-200 bg-white py-2 px-3 text-xs font-bold text-purple-700 shadow-xs hover:bg-purple-50"
-                >
-                  Admin Fields
-                </button>
-              </div>
-              <p className="text-[10px] text-slate-400 mt-2">
-                Note: Click "Sign In" above to verify credentials and access the portal.
-              </p>
-            </div>
-
             <div className="mt-4 text-center text-xs text-slate-500">
               Don't have an account?{' '}
               <button
                 type="button"
                 onClick={() => {
-                  setIsRegistering(true);
+                  setAuthMode('register');
                   setError(null);
                 }}
                 className="font-bold text-blue-600 hover:underline"
               >
                 Register Here
+              </button>
+            </div>
+
+            <div className="mt-2.5 pt-2.5 border-t border-slate-100 text-center text-xs text-slate-500">
+              Admin Login?{' '}
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode('admin');
+                  setAdminEmail('');
+                  setAdminPassword('');
+                  setError(null);
+                }}
+                className="font-bold text-blue-600 hover:underline"
+              >
+                Sign In
               </button>
             </div>
           </form>
@@ -290,19 +413,34 @@ export const LoginModal: React.FC<LoginModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600">
-                Mobile Number
-              </label>
-              <div className="relative mt-1">
-                <Phone className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600">
+                  Mobile Number
+                </label>
+                <span className="text-[11px] font-semibold text-slate-400">
+                  {mobile.length}/10 digits
+                </span>
+              </div>
+              <div className="relative mt-1 flex rounded-xl border border-slate-200 bg-slate-50 overflow-hidden focus-within:border-blue-500 focus-within:bg-white focus-within:ring-2 focus-within:ring-blue-100 transition">
+                {/* Fixed +91 country code place */}
+                <div className="flex items-center space-x-1 border-r border-slate-200 bg-slate-100/90 px-3 py-2 text-xs font-bold text-slate-700 select-none shrink-0">
+                  <span className="text-sm">🇮🇳</span>
+                  <span>+91</span>
+                </div>
                 <input
                   type="tel"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={10}
                   value={mobile}
-                  onChange={(e) => setMobile(e.target.value)}
-                  placeholder="+91 9876543210"
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-3 py-2 text-sm text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none"
+                  onChange={handleMobileChange}
+                  placeholder="9876543210"
+                  className="w-full bg-transparent px-3 py-2 text-sm font-semibold tracking-wider text-slate-800 placeholder-slate-400 focus:outline-none"
                 />
               </div>
+              <p className="mt-1 text-[10px] text-slate-400">
+                Enter a Valid Mobile Number
+              </p>
             </div>
 
             <div className="grid grid-cols-2 gap-2">
@@ -344,7 +482,23 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               <button
                 type="button"
                 onClick={() => {
-                  setIsRegistering(false);
+                  setAuthMode('login');
+                  setError(null);
+                }}
+                className="font-bold text-blue-600 hover:underline"
+              >
+                Sign In
+              </button>
+            </div>
+
+            <div className="mt-2 pt-2 border-t border-slate-100 text-center text-xs text-slate-500">
+              Admin Login?{' '}
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode('admin');
+                  setAdminEmail('');
+                  setAdminPassword('');
                   setError(null);
                 }}
                 className="font-bold text-blue-600 hover:underline"

@@ -9,7 +9,8 @@ import {
   CheckCircle,
   Eye,
   MapPin,
-  Edit3
+  Edit3,
+  History
 } from 'lucide-react';
 import { Complaint, ComplaintStatus, Department, Priority } from '../types';
 
@@ -17,12 +18,14 @@ interface AdminDashboardViewProps {
   complaints: Complaint[];
   onSelectComplaint: (complaint: Complaint) => void;
   onUpdateComplaint: (updated: Complaint) => void;
+  onNavigate?: (view: string) => void;
 }
 
 export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   complaints,
   onSelectComplaint,
-  onUpdateComplaint
+  onUpdateComplaint,
+  onNavigate
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [deptFilter, setDeptFilter] = useState('All');
@@ -104,6 +107,16 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
             </p>
           </div>
         </div>
+
+        {onNavigate && (
+          <button
+            onClick={() => onNavigate('activity-logs')}
+            className="inline-flex items-center space-x-2 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white shadow-md hover:bg-blue-700 transition shrink-0"
+          >
+            <History className="h-4 w-4" />
+            <span>Audit Activity Logs</span>
+          </button>
+        )}
       </div>
 
       {/* 4 Admin Stats Cards */}

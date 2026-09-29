@@ -9,7 +9,8 @@ import {
   Shield,
   User,
   LogOut,
-  X
+  X,
+  History
 } from 'lucide-react';
 import { User as UserType } from '../types';
 
@@ -38,6 +39,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
     { id: 'live-issues', label: 'Live Issues', icon: AlertTriangle },
     { id: 'solved-issues', label: 'Solved Issues', icon: CheckCircle },
     { id: 'admin-dashboard', label: 'Admin Dashboard', icon: Shield, adminOnly: true },
+    { id: 'activity-logs', label: 'Activity Audit Logs', icon: History, adminOnly: true },
     { id: 'profile', label: 'Profile', icon: User }
   ];
 
@@ -58,12 +60,12 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
 
       {/* Sidebar Container */}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 w-64 transform bg-slate-900 text-slate-100 transition-transform duration-200 ease-in-out lg:static lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 w-64 transform bg-slate-900 text-slate-100 transition-transform duration-200 ease-in-out ${
           isOpenMobile ? 'translate-x-0' : '-translate-x-full'
-        } flex flex-col border-r border-slate-800 shadow-xl`}
+        } lg:sticky lg:top-16 lg:h-[calc(100vh-4rem)] lg:translate-x-0 lg:self-start lg:shrink-0 flex flex-col border-r border-slate-800 shadow-xl`}
       >
         {/* Mobile Header Close */}
-        <div className="flex items-center justify-between p-4 border-b border-slate-800 lg:hidden">
+        <div className="flex items-center justify-between p-4 border-b border-slate-800 lg:hidden shrink-0">
           <span className="font-bold text-white text-sm">Navigation Menu</span>
           <button
             onClick={onCloseMobile}
@@ -75,7 +77,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
 
         {/* User Info Header in Sidebar */}
         {currentUser && (
-          <div className="p-4 border-b border-slate-800/80 bg-slate-950/40">
+          <div className="p-4 border-b border-slate-800/80 bg-slate-950/40 shrink-0">
             <div className="flex items-center space-x-3">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 text-white font-bold text-sm shadow">
                 {currentUser.name.charAt(0)}
@@ -94,7 +96,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
         )}
 
         {/* Navigation Links */}
-        <nav className="flex-1 space-y-1 p-3 overflow-y-auto">
+        <nav className="flex-1 space-y-1 p-3 overflow-y-auto min-h-0">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeView === item.id;
@@ -135,7 +137,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
 
         {/* Footer Logout */}
         {currentUser && (
-          <div className="p-3 border-t border-slate-800">
+          <div className="p-3 border-t border-slate-800 shrink-0">
             <button
               onClick={onLogout}
               className="flex w-full items-center space-x-3 rounded-xl px-3.5 py-2.5 text-xs font-bold text-red-400 hover:bg-red-500/10 hover:text-red-300 transition"

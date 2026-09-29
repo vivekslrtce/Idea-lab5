@@ -1,5 +1,5 @@
 import React from 'react';
-import { Building2, Shield, User as UserIcon, LogOut, PlusCircle, Menu } from 'lucide-react';
+import { Building2, Shield, User as UserIcon, LogOut, PlusCircle, Menu, History } from 'lucide-react';
 import { User } from '../types';
 
 interface HeaderNavbarProps {
@@ -18,8 +18,8 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
   onToggleSidebar
 }) => {
   return (
-    <header className="sticky top-0 z-40 border-b border-blue-900/10 bg-blue-900 text-white shadow-md">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
+    <header className="sticky top-0 z-40 h-16 shrink-0 border-b border-blue-900/10 bg-blue-900 text-white shadow-md">
+      <div className="mx-auto flex h-full max-w-7xl items-center justify-between px-4 sm:px-6">
         {/* Left Side: Menu toggle & Brand */}
         <div className="flex items-center space-x-3">
           <button
@@ -60,6 +60,17 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
             <PlusCircle className="h-4 w-4" />
             <span>Report Problem</span>
           </button>
+
+          {currentUser?.role === 'admin' && (
+            <button
+              onClick={() => onNavigate('activity-logs')}
+              className="hidden md:inline-flex items-center space-x-1.5 rounded-xl bg-amber-500/20 border border-amber-400/40 px-3 py-1.5 text-xs font-bold text-amber-200 hover:bg-amber-500/30 transition shadow-xs"
+              title="Audit Activity Logs"
+            >
+              <History className="h-3.5 w-3.5 text-amber-300" />
+              <span>Audit Logs</span>
+            </button>
+          )}
 
           {currentUser ? (
             <div className="flex items-center space-x-2">

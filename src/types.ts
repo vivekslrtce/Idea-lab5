@@ -13,6 +13,29 @@ export type ComplaintStatus = 'Reported' | 'Under Review' | 'In Progress' | 'Res
 
 export type UserRole = 'citizen' | 'admin';
 
+export type ActivityActionType =
+  | 'USER_LOGIN'
+  | 'USER_LOGOUT'
+  | 'USER_REGISTER'
+  | 'COMPLAINT_CREATED'
+  | 'COMPLAINT_STATUS_UPDATED'
+  | 'COMPLAINT_UPDATED'
+  | 'PROFILE_UPDATED';
+
+export interface ActivityLog {
+  id: string;
+  timestamp: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  userRole: UserRole;
+  action: ActivityActionType;
+  title: string;
+  description: string;
+  targetId?: string;
+  metadata?: Record<string, any>;
+}
+
 export interface User {
   id: string;
   name: string;

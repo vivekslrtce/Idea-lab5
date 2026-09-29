@@ -10,26 +10,30 @@ The **Urban Utility Problem Reporting Platform** bridges the communication gap b
 
 ---
 
-## 🔑 Demo Credentials
+## 🔑 Authentication & Credentials
 
-The platform enforces a strict authentication gate. On page refresh or new session, users are prompted to authenticate. You can use the pre-seeded credentials below or register a new citizen account:
+The platform enforces a strict authentication gate. On page refresh or new session, users are prompted to authenticate. You can use pre-seeded demo accounts or register a new citizen account:
 
-| Role | Email | Password | Access Level |
+| Role | Email Requirement | Password | Access Level |
 | :--- | :--- | :--- | :--- |
 | **Citizen (Demo)** | `citizen@example.com` | `password123` | Report problems, track submissions, view live/solved issues, view profile |
-| **Civic Admin** | `admin@citygov.org` | `admin123` | Manage all complaints, change departments, reassign priorities, update statuses, add remarks |
+| **Civic Admin** | Any handle with `@gov.in` domain (e.g., `admin@gov.in`, `officer@gov.in`) | `admin123` | Manage all complaints, change departments, reassign priorities, update statuses, add remarks, view activity audit logs |
 
-> **Note**: Admin access is restricted. Clicking **Admin Portal** or **Admin Login** opens a dedicated credential verification modal requiring valid administrative credentials.
+> **Admin Access Notice**: 
+> - **Domain Verification**: Admin email accepts any username, but the domain **must be `@gov.in`** (or a subdomain ending with `.gov.in`).
+> - **Security Discipline**: The Admin login view contains no input placeholders and no pre-filled credentials.
+> - **Direct Link**: A clean **"Admin Login? Sign In"** link is available directly on the citizen login form to switch to admin authentication.
 
 ---
 
 ## ✨ Key Features
 
 ### 1. 🔐 Authentication & Session Security
-- **Strict Login Gate**: Fresh sessions and page reloads always require authentication before entering the app.
-- **Citizen Registration**: Full form validation for Full Name, Email, 10-digit Mobile number, and matching Passwords.
-- **Admin Passcode Modal**: Dedicated authentication barrier preventing unauthorized access to the admin dashboard.
-- **Fast Demo Sign-in**: One-click autofill buttons for rapid testing during evaluations and demonstrations.
+- **Strict Login Gate**: Fresh sessions and page reloads require authentication before accessing portal resources.
+- **Admin Verification (@gov.in domain)**: Dedicated admin sign-in enforcing official `@gov.in` email domain validation with admin passcode verification.
+- **Indian Mobile Number Validation**: Citizen registration strictly validates standard 10-digit Indian mobile numbers starting with **6, 7, 8, or 9** (prompts *"Enter a Valid Mobile Number"* on invalid entry).
+- **Sticky / Fixed Layout**: The navigation sidebar and headers stay fixed during full-screen scrolling, allowing seamless navigation without losing viewport context.
+- **Role-Based Routing**: Restricts administrative controls (dashboard triage, status transitions, audit logs) strictly to authenticated `@gov.in` administrators.
 
 ### 2. 📊 Citizen Dashboard & Analytics
 - **Live Statistics Cards**: Real-time counter of Total Reports, Active Issues, In Progress, and Solved Complaints.
@@ -76,10 +80,27 @@ The platform enforces a strict authentication gate. On page refresh or new sessi
   - Escalate or lower priority (`Low`, `Medium`, `High`).
   - Append internal notes and public resolution remarks.
 
-### 7. 👤 User Profile Management
+### 7. 📜 Activity Logging & Admin Audit View
+- **Dedicated LocalStorage Audit Store**: Records citizen and administrator interactions in the `ufr_activity_logs` array.
+- **Tracked Actions**:
+  - `USER_LOGIN` / `USER_LOGOUT`: Session sign-in and sign-out timestamps.
+  - `USER_REGISTER`: Account creation details with citizen contact info.
+  - `COMPLAINT_CREATED`: Filing of civic problem reports with priority, department, and location metadata.
+  - `COMPLAINT_STATUS_UPDATED`: Real-time transitions (e.g., `Reported` ➔ `In Progress` ➔ `Resolved`).
+  - `COMPLAINT_UPDATED`: Modifications to department assignments, priority levels, or remarks.
+  - `PROFILE_UPDATED`: Personal detail modifications.
+- **Admin Audit View Features**:
+  - Filter by Actor Role (`All`, `Citizens Only`, `Admins Only`).
+  - Filter by Action Category (`Complaints`, `Status Changes`, `Authentication`, `Profile`).
+  - Search by user name, email, action description, or complaint tracking ID.
+  - Direct complaint inspector trigger: clicking any `UFR-xxxx` badge immediately opens the full Complaint Details modal.
+  - Analytics cards: Total Audit Logs, Citizen Actions, Admin Actions, and Events in the Past 24 Hours.
+  - Utility tools: Real-time Refresh, Export JSON, and Clear Logs (with Demo reset).
+
+### 8. 👤 User Profile Management
 - Shows registered citizen profile details (Name, Email, Mobile).
 - Personal activity summary (Total Lodged, Active, and Solved reports).
-- In-place profile editor to update personal contact information.
+- In-place profile editor to update personal contact information with Indian mobile number format validation and `@gov.in` domain checking for admin roles.
 
 ---
 
@@ -117,12 +138,12 @@ The platform enforces a strict authentication gate. On page refresh or new sessi
 ├── vite.config.ts               # Vite configuration with Tailwind CSS integration
 └── src/
     ├── main.tsx                 # Application entry point
-    ├── App.tsx                  # Main router, global state, and authentication guard
+    ├── App.tsx                  # Main router, global state, layout, and authentication guard
     ├── index.css                # Tailwind CSS global styles
     ├── types.ts                 # TypeScript interfaces (Complaint, User, Department, etc.)
     ├── components/
     │   ├── HeaderNavbar.tsx     # Top navigation with role indicators & auth triggers
-    │   ├── SidebarNav.tsx       # Sidebar navigation for views and department links
+    │   ├── SidebarNav.tsx       # Sticky sidebar navigation for views and department links
     │   ├── DashboardView.tsx    # Citizen analytics, quick links, and Leaflet map
     │   ├── MapVisualizer.tsx    # Leaflet interactive map with custom pins & popups
     │   ├── ReportProblemView.tsx# Complaint form, auto-suggester, camera, & GPS
@@ -133,12 +154,14 @@ The platform enforces a strict authentication gate. On page refresh or new sessi
     │   ├── DepartmentsView.tsx  # Department cards and department-specific complaint filter
     │   ├── AdminDashboardView.tsx # Authority triage portal, status updater, & remarks
     │   ├── ProfileView.tsx      # User profile, summary statistics, & edit modal
-    │   ├── LoginModal.tsx       # Citizen login & registration modal with validation
-    │   ├── AdminAuthModal.tsx   # Secured administrator credential gate
+    │   ├── LoginModal.tsx       # Citizen login, registration, & admin sign-in view
+    │   ├── AdminAuthModal.tsx   # Secured administrator credential gate with @gov.in validation
+    │   ├── ActivityLogsView.tsx # Admin audit logs viewer, filters, metrics, & export
     │   └── ComplaintDetailsModal.tsx # Full complaint viewer with 4-step status timeline
     └── utils/
+        ├── activityLogger.ts    # 'ufr_activity_logs' storage operations, logger, & seed data
         ├── departmentSuggester.ts # Keyword-matching department prediction engine
-        └── initialData.ts       # Pre-seeded demo complaints, users, and localStorage initialization
+        └── initialData.ts       # Pre-seeded demo complaints, @gov.in validation helper, and users
 ```
 
 ---

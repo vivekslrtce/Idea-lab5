@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, Shield, Lock, Mail, AlertCircle, KeyRound } from 'lucide-react';
 import { User } from '../types';
-import { DEMO_ADMIN } from '../utils/initialData';
+import { DEMO_ADMIN, isGovInEmail } from '../utils/initialData';
 
 interface AdminAuthModalProps {
   isOpen: boolean;
@@ -14,7 +14,7 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
   onClose,
   onAdminSuccess
 }) => {
-  const [email, setEmail] = useState('admin@citygov.org');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
 
@@ -29,12 +29,29 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
       return;
     }
 
-    if (email.trim().toLowerCase() === DEMO_ADMIN.email.toLowerCase() && password === 'admin123') {
-      onAdminSuccess(DEMO_ADMIN);
+    if (!isGovInEmail(email)) {
+      setError('Invalid Admin Email: Domain must be @gov.in (e.g. any name with @gov.in).');
+      return;
+    }
+
+    if (password === 'admin123') {
+      const emailLower = email.trim().toLowerCase();
+      const adminUser: User = {
+        id: emailLower === DEMO_ADMIN.email.toLowerCase() ? DEMO_ADMIN.id : `usr-admin-${Date.now()}`,
+        name:
+          emailLower === DEMO_ADMIN.email.toLowerCase()
+            ? DEMO_ADMIN.name
+            : `Admin (${emailLower.split('@')[0]})`,
+        email: emailLower,
+        mobile: DEMO_ADMIN.mobile,
+        role: 'admin'
+      };
+      onAdminSuccess(adminUser);
       setPassword('');
+      setEmail('');
       onClose();
     } else {
-      setError('Access Denied: Invalid Admin Credentials or Passcode.');
+      setError('Access Denied: Invalid Admin Password.');
     }
   };
 
@@ -77,7 +94,7 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-slate-600">
-              Admin Email
+              Admin Email <span className="normal-case font-normal text-amber-700">(@gov.in domain)</span>
             </label>
             <div className="relative mt-1">
               <Mail className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
@@ -85,10 +102,12 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@citygov.org"
                 className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-3 py-2.5 text-xs font-bold text-slate-800 focus:border-amber-500 focus:bg-white focus:outline-none"
               />
             </div>
+            <p className="mt-1 text-[11px] text-slate-500">
+              Authorized government email (domain must be <span className="font-semibold text-slate-700">@gov.in</span>)
+            </p>
           </div>
 
           <div>
@@ -101,11 +120,9 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter admin password (admin123)"
                 className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-3 py-2.5 text-xs font-bold text-slate-800 focus:border-amber-500 focus:bg-white focus:outline-none"
               />
             </div>
-            <p className="text-[10px] text-slate-400 mt-1">Demo Admin Credentials: admin@citygov.org / admin123</p>
           </div>
 
           <div className="flex items-center space-x-2 pt-2">

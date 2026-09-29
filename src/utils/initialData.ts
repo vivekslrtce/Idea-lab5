@@ -1,4 +1,5 @@
 import { Complaint, User } from '../types';
+import { initializeActivityLogs } from './activityLogger';
 
 export const DEMO_CITIZEN: User = {
   id: 'usr-citizen-01',
@@ -11,9 +12,24 @@ export const DEMO_CITIZEN: User = {
 export const DEMO_ADMIN: User = {
   id: 'usr-admin-01',
   name: 'Admin Office (Civic Auth)',
-  email: 'admin@citygov.org',
+  email: 'admin@gov.in',
   mobile: '+91 9000000000',
   role: 'admin'
+};
+
+/**
+ * Checks whether an email address has a valid @gov.in domain.
+ * Accepts any name before @, but domain must be @gov.in or a subdomain of gov.in
+ */
+export const isGovInEmail = (emailStr: string): boolean => {
+  if (!emailStr) return false;
+  const trimmed = emailStr.trim().toLowerCase();
+  const atIndex = trimmed.lastIndexOf('@');
+  if (atIndex <= 0) return false;
+  const localPart = trimmed.slice(0, atIndex);
+  const domain = trimmed.slice(atIndex + 1);
+  if (!localPart) return false;
+  return domain === 'gov.in' || domain.endsWith('.gov.in');
 };
 
 export const INITIAL_COMPLAINTS: Complaint[] = [
@@ -190,4 +206,5 @@ export function initializeStorage() {
   if (!localStorage.getItem('ufr_registered_users')) {
     localStorage.setItem('ufr_registered_users', JSON.stringify([DEMO_CITIZEN, DEMO_ADMIN]));
   }
+  initializeActivityLogs();
 }

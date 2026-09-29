@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { User as UserIcon, Mail, Phone, Shield, Edit3, LogOut, FileText, Clock, CheckCircle2, Save } from 'lucide-react';
 import { User, Complaint } from '../types';
+import { isGovInEmail } from '../utils/initialData';
 
 interface ProfileViewProps {
   currentUser: User | null;
@@ -19,10 +20,19 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 }) => {
   if (!currentUser) return null;
 
+  const extract10Digits = (val: string) => {
+    const d = val.replace(/\D/g, '');
+    if (d.length === 12 && d.startsWith('91')) {
+      return d.slice(2);
+    }
+    return d.slice(0, 10);
+  };
+
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(currentUser.name);
   const [email, setEmail] = useState(currentUser.email);
-  const [mobile, setMobile] = useState(currentUser.mobile);
+  const [mobileDigits, setMobileDigits] = useState(() => extract10Digits(currentUser.mobile));
+  const [profileError, setProfileError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
   // User stats
@@ -37,11 +47,29 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
+    setProfileError(null);
+
+    const clean = mobileDigits.replace(/\D/g, '');
+    if (!name.trim() || !email.trim() || !clean) {
+      setProfileError('All fields are required.');
+      return;
+    }
+
+    if (clean.length !== 10 || !/^[6-9]/.test(clean)) {
+      setProfileError('Enter a Valid Mobile Number');
+      return;
+    }
+
+    if (currentUser.role === 'admin' && !isGovInEmail(email)) {
+      setProfileError('Admin email must have @gov.in domain (e.g. name@gov.in).');
+      return;
+    }
+
     const updated: User = {
       ...currentUser,
       name: name.trim(),
       email: email.trim(),
-      mobile: mobile.trim()
+      mobile: `+91 ${clean}`
     };
     onUpdateUser(updated);
     setIsEditing(false);
@@ -57,6 +85,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           Account details, contact information, and complaint reporting history.
         </p>
       </div>
+
+      {profileError && (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700">
+          {profileError}
+        </div>
+      )}
 
       {saveSuccess && (
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs font-semibold text-emerald-800">
@@ -188,24 +222,46 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">
-                  Mobile Number
-                </label>
-                <input
-                  type="tel"
-                  value={mobile}
-                  onChange={(e) => setMobile(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-bold text-slate-800"
-                  required
-                />
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-semibold text-slate-600">
+                    Mobile Number
+                  </label>
+                  <span className="text-[10px] font-semibold text-slate-400">
+                    {mobileDigits.length}/10 digits
+                  </span>
+                </div>
+                <div className="flex rounded-xl border border-slate-200 bg-slate-50 overflow-hidden focus-within:border-blue-500 focus-within:bg-white focus-within:ring-2 focus-within:ring-blue-100 transition">
+                  <div className="flex items-center space-x-1 border-r border-slate-200 bg-slate-100/90 px-3 py-2 text-xs font-bold text-slate-700 select-none shrink-0">
+                    <span className="text-sm">🇮🇳</span>
+                    <span>+91</span>
+                  </div>
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={10}
+                    value={mobileDigits}
+                    onChange={(e) => setMobileDigits(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                    placeholder="9876543210"
+                    className="w-full bg-transparent px-3 py-2 text-xs font-bold tracking-wider text-slate-800 placeholder-slate-400 focus:outline-none"
+                    required
+                  />
+                </div>
+                <p className="mt-1 text-[10px] text-slate-400">
+                  Enter a Valid Mobile Number
+                </p>
               </div>
             </div>
 
             <div className="flex items-center justify-end space-x-2 pt-2">
               <button
                 type="button"
-                onClick={() => setIsEditing(false)}
-                className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-bold text-slate-700"
+                onClick={() => {
+                  setIsEditing(false);
+                  setProfileError(null);
+                  setMobileDigits(extract10Digits(currentUser.mobile));
+                }}
+                className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100"
               >
                 Cancel
               </button>
