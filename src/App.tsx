@@ -34,6 +34,7 @@ export default function App() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(true); // Open login on refresh
   const [isAdminAuthOpen, setIsAdminAuthOpen] = useState(false);
   const [isSidebarOpenMobile, setIsSidebarOpenMobile] = useState(false);
+  const [authSessionKey, setAuthSessionKey] = useState(0);
 
   // Initialize data on mount
   useEffect(() => {
@@ -100,6 +101,7 @@ export default function App() {
 
     setCurrentUser(null);
     setActiveView('dashboard');
+    setAuthSessionKey((prev) => prev + 1);
     setIsAuthModalOpen(true);
   };
 
@@ -380,6 +382,7 @@ export default function App() {
 
       {/* Mandatory Login / Register Gate Modal */}
       <LoginModal
+        key={`auth-gate-${authSessionKey}`}
         isOpen={isAuthModalOpen || currentUser === null}
         onClose={() => {
           if (currentUser !== null) {

@@ -97,7 +97,9 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
 
         {/* Navigation Links */}
         <nav className="flex-1 space-y-1 p-3 overflow-y-auto min-h-0">
-          {navItems.map((item) => {
+          {navItems
+            .filter((item) => !item.adminOnly || currentUser?.role === 'admin')
+            .map((item) => {
             const Icon = item.icon;
             const isActive = activeView === item.id;
 

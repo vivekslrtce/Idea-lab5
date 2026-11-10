@@ -74,8 +74,11 @@ The application implements strict client-side validation to ensure clean civic r
 - **Accepted Pattern**: `[name]@[subdomain.]gov.in` (e.g., `admin@gov.in`, `ward12@delhi.gov.in`).
 - **Rejection Feedback**: If an admin enters an unsupported email domain (such as `@gmail.com` or `@example.com`), the form displays: `Invalid Admin Email: Domain must be @gov.in (e.g. any name with @gov.in)`.
 
-### 3. Password Standards
-- Citizen registrations require a minimum length of **6 characters** and strict confirmation matching.
+### 3. Password Standards & Formatting
+- **Password Format**: Minimum length of **6 characters** (case-sensitive).
+- **Show/Hide Visibility Toggle**: Interactive eye icon toggle allowing users to view or mask passwords across all login and registration inputs.
+- **Forgot Password Recovery**: Interactive "Forgot Password?" flow enabling citizens and administrators to recover/reset passwords using their registered email with instant local persistence.
+- **Registration Navigation & Back Buttons**: Prominent "Back to Sign In / Login" buttons both at the top of the registration form and as a dedicated secondary button alongside "Complete Registration", plus header arrow navigation.
 
 ---
 
@@ -90,7 +93,9 @@ The application implements strict client-side validation to ensure clean civic r
 ## ⚙️ Core Functional Modules
 
 ### 1. 🔐 Authentication & Security Gate
-- **Unified Login Modal**: Switch seamlessly between **Sign In**, **Create Citizen Account**, and **Admin Sign In**.
+- **Unified Login Modal**: Switch seamlessly between **Sign In**, **Create Citizen Account**, **Admin Sign In**, and **Forgot Password / Reset**.
+- **Password Formatting & Reset**: Full client-side password recovery with "Forgot Password?" link, format requirement indicators (`Min. 6 characters`), and show/hide visibility toggles.
+- **Dedicated Back Navigation**: Multi-point back navigation on the registration page (header back arrow, inline back button, and bottom sign-in link).
 - **Role-Based Guards**: Admin views (*Admin Dashboard* and *Activity Audit Logs*) are strictly guarded; attempting to access them as a citizen triggers the Admin verification prompt.
 - **Session Termination**: Clean sign-out resets the session and displays the authentication gate.
 
